@@ -13,7 +13,7 @@ if exist('imported','var') ~= 1
     def_symbols;
     imported = 1;
 end
-%% 7.1 Linear and angular momentum
+%% 8.1 Stress vectors
 % define the geometry and build the tetrahedron
 Xi = [[1/10 0 0]; [0 1/10 0]; [0 0 1/10]; [0 0 0]; ]';
 % density
@@ -26,17 +26,53 @@ R1 = @(theta) [ [ 1 0 0 ]; [ 0 cos(theta) -sin(theta) ]; [ 0 sin(theta) cos(thet
 R2 = @(theta) [ [ cos(theta) 0 -sin(theta) ]; [ 0 1 0 ]; [ sin(theta) 0 cos(theta) ];];
 R3 = @(theta) [ [ cos(theta) -sin(theta) 0 ]; [ sin(theta) cos(theta) 0 ]; [ 0 0 1 ];];
 
+%Motion of the tetrahedron as in exercice 7
 Tmax = 1/2;
+T = 1/2 %Just to get some results...
 Rt = R3(2*pi*T/Tmax);
 bt = [ 0 0 3/20*T/Tmax]';
 y =@(R,x,b) R*x + b;
 
+%Contact force defined with handles
+F_contact  =  @(theta) [-pi^2/15*(cos(theta)-sin(theta)); -pi^2/15*(cos(theta)+sin(theta));5/3];
+F_contact0 =  @(fact,theta) fact*[cos(theta)+sin(theta);cos(theta)-sin(theta);0];
+
+%Apply the given values
+F_con  = F_contact(4*pi*T)
+F_con0 = F_contact0(125+pi^2*(4+60*T)/3000,4*pi*T)
+
 % Function handle to clean up all these triple integrals
 TripInt =@(fun,v1,l1,u1,v2,l2,u2,v3,l3,u3) int( int( int( fun, v1, l1, u1), v2, l2, u2), v3, l3, u3);
-    
-%% Linear momentum    
+ 
+%% Forces vectors on the verticles  
+COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+faceArea= @(curNode1,curNode2,curNode3) cm.norm(cm.cross_product((curNode1-curNode2),(curNode3-curNode2)));  
+
 
 yt      = y(Rt,Xi(1:3,1:3)*b,bt); % Simple transform of b into x into y...
+V = 1/6000; % same result as above but keep it symbolic
+M           = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);          
+yc = COG(yt)
+
+%Final positions
+yi(:,1) = y(Rt,Xi(:,1),bt)
+yi(:,2) = y(Rt,Xi(:,2),bt)
+yi(:,3) = y(Rt,Xi(:,3),bt)
+yi(:,4) = y(Rt,Xi(:,4),bt)
+
+%Get the normals to the faces, centers and area
+Area(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
+Area(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
+Area(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
+Area(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
+
+[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+wt = 0;
+for i = 1:4
+    tempwt = -4*(cm.scalar_product(ycenti(:,i),(Area(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
+    wt = wt + tempwt;
+end
+
 dydt    = diff(yt,T);
 d2yd2t  = diff(dydt,T);
 
