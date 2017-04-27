@@ -66,8 +66,11 @@ Area(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
 Area(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
 Area(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
 
-[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+%Use the providen function for the normals to the surface
+[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4));
 wt = 0;
+
+%Calcul 
 for i = 1:4
     tempwt = -4*(cm.scalar_product(ycenti(:,i),(Area(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
     wt = wt + tempwt;

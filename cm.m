@@ -17,6 +17,8 @@ classdef cm
 % 4.4.17   V8 - Bugfix + visualizeTensorAtP() 
 %               and plot_tetra_point
 % 11.4.17  V9   Bugfix / improved version of plot_vector()
+% 27.4.17  V10  Bugfix: get_tetra_normal() returned the normals in a not
+%               very smart order..
 %
 % ***********************************************************    
 
@@ -954,11 +956,12 @@ classdef cm
 %===============================================================
     function s = transform_32(A3,B)
     % ***********************************************************
-    % Computes the multipliation of a second order tensor
+    % Computes the multiplication of a second order tensor
     % by a third order tensor.
     % The third order tensor has to be in a 3*3*3 format!
     % si = Aijk Bjk
     % ***********************************************************
+    
     % symbolic or numeric? -> used for zero initialisation
     if strcmp(class(A3),'sym') == 1 || strcmp(class(B),'sym') == 1
         s = vpa(zeros(3,1));
@@ -1014,46 +1017,6 @@ classdef cm
             for k = 1:2
                 for l=1:2
                     Y(i,j) = Y(i,j) + A4(i,j,k,l)*A(k,l);
-                end
-            end
-        end 
-    end
-    end
-%===============================================================
-    function S = transform_222(Q4,T2)
-    % ***********************************************************
-    %Sij = Qik Qjl Tkl
-    % ***********************************************************
-    if strcmp(class(Q4),'sym') == 1 && strcmp(class(T2),'sym') == 1
-        S = vpa(zeros(3,3));
-    else
-        S = zeros(3,3);
-    end
-    for i=1:3
-        for j=1:3
-            for k = 1:3
-                for l=1:3
-                    S(i,j)= S(i,j) + Q4(i,k)*Q4(j,l)*T2(k,l); 
-                end
-            end
-        end 
-    end
-    end
-%===============================================================
-    function trans2 = transform_222_2D(Q2,T2)
-    % ***********************************************************
-    %Sij = Qik Qjl Tkl
-    % ***********************************************************
-    if strcmp(class(Q2),'sym') == 1 && strcmp(class(T2),'sym') == 1
-        trans2 = vpa(zeros(2,2));
-    else
-        trans2 = zeros(2,2);
-    end
-    for i=1:2
-        for j=1:2
-            for k = 1:2
-                for l = 1:2
-                    trans2(i,j)= trans2(i,j) + Q2(i,k)*Q2(j,l)*T2(k,l); 
                 end
             end
         end 
@@ -1536,8 +1499,10 @@ classdef cm
         end
         %********************************************************************* 
     end   
-    normal = [normal1 normal2 normal3 normal4];
-    centeroid = [centeroid1 centeroid2 centeroid3 centeroid4];   
+    %normal = [normal1 normal2 normal3 normal4];
+    %centeroid = [centeroid1 centeroid2 centeroid3 centeroid4];   
+    normal = [normal3 normal4 normal2 normal1];
+    centeroid = [centeroid3 centeroid4 centeroid2 centeroid1];   
     %axis auto 
     end
 %===============================================================
