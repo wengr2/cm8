@@ -14,7 +14,6 @@ if exist('imported','var') ~= 1
     imported = 1;
 end
 %% Parameters
-
 %Toogle symbolic values, used for testing
 enableSyms = 1;
 %% 8.1 Computation of all necessary variables
@@ -63,19 +62,21 @@ F_con0 = F_contact0((125+pi^2*(4+60*T))/3000,4*pi*T);
 % Function handle to clean up all these triple integrals
 TripInt =@(fun,v1,l1,u1,v2,l2,u2,v3,l3,u3) int( int( int( fun, v1, l1, u1), v2, l2, u2), v3, l3, u3);
 
-% Function handle for the centre of gravity
-COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-
 % Function handle for the are of faces
 faceArea = @(nodeB,nodeC,nodeD) 1/2*cm.norm(cm.cross_product((nodeC-nodeD),(nodeB-nodeD)));  
 
-% Old stuff
+
 % %Computation of the new vertices
 yt = y(Rt,Xi(1:3,1:3)*b,bt); % Simple transform of b into x into y...
-% 
-% 
-% % V = 1/6000; % same result as above but keep it symbolic
-% % M = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);          
+
+%Center of gravtiy
+V = 1/6000; %
+M = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);    
+
+
+% Function handle for the centre of gravity
+COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+
 yc = COG(yt);
 
 %Final positions
@@ -92,7 +93,9 @@ Ai(4)=faceArea(yi(:,1),yi(:,2),yi(:,3));
 
 
 %Use the providen function for the normals to the surface
+[xnormi xcenti] = cm.get_tetra_normal(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
 [ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4));
+
 
 %Computation of the Area-weighted normas
 for i = 1:4
@@ -122,7 +125,7 @@ for i=1:4
 end  
 %% 8.1 (1) Definition of the contact forces 
 %Compute the sum of the forces
-sumift = sum(ift,2)
+sumift = sum(ift,2);
 
 %Compare with the given contact force
 cm.show1(simplify(sumift-F_con))
@@ -142,201 +145,136 @@ res2=(simplify(sumMyi-F_con0));
 %Round up for the display
 cm.show1(cm.roundDecimals(double(subs(res2,t,Tmax)),2))
 
-
-
-%% 7.1.(1) verify linear momentum is velocity of the center of mass times the total mass
-M           = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-% Center of gravity for the velocity of y
-COG =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-dydt_cog = COG(dydt);
-cm.show1(simplify(lt - M*dydt_cog));
-
-% Compute angular momentum with respect to the origin
-l_hat_0 = simplify(6*V*TripInt(cm.cross_product(yt,dydt)*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1));
-
-% Calculate the angular velocity
-dRdt = diff(Rt,T);
-% Put the epsilon tensor together
-epsilon = levi;
-omega = simplify(-1/2*cm.transform_32(epsilon,cm.composition22(dRdt,cm.transpose2(Rt))));
-
-% Know the tensor of inertia in case of a rotation
-X = Xi(1:3,1:3)*b;
-Xcog = COG(X);
-%Xcog    = 6*V/M*TripInt(rho*X,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-
-Jc = 6*V*TripInt(((cm.norm(X - Xcog)^2*I)-cm.dyadic_product11((X-Xcog),(X-Xcog)))*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-Jc_t   = simplify(Rt*Jc*cm.transpose2(Rt));
-yt_cog = COG(yt);
-
-%% 7.1.(2)  Verify the angular momentum about the origin
-cm.show1(simplify(l_hat_0 - (Jc_t*omega + M*cm.cross_product(yt_cog,dydt_cog))));
-
-%% 7.2 Inertial Forces and Moments
-
-%%% Calculate the inertial force
-f_ine = diff(lt,T);
-%f_ine_alt  = 6*V*TripInt(d2yd2t*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-%cm.show1(simplify(f_ine_alt-f_ine));
-
-%%% Calculate the inertial moment
-fhat_ine_0 = diff(l_hat_0,T);
-%fhat_ine_0_alt = 6*V*TripInt(cm.cross_product(yt,d2yd2t)*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-%cm.show1(simplify(fhat_ine_0_alt-fhat_ine_0));
-
-%% 7.2.(3)
-d2yd2t_cog = diff(diff(yt_cog,T),T);
-cm.show1(simplify(M*d2yd2t_cog - f_ine));
-
-%% 7.2.(4)
-cm.show1(simplify(fhat_ine_0 - (diff(Jc_t,T)*omega + Jc_t*diff(omega,T) + M*cm.cross_product(yt_cog ,d2yd2t_cog))));
-
-%% 7.3 Volume forces and moments
-
-% Calculate the gravitational force on the tetrahedron
-f_vol = -6*V*TripInt(rho*g*e3,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-
-%% 7.3.(5) Gravitational volume force at center of mass
-cm.show1(simplify(f_vol + M*g*e3));
-
-%% 7.3.(6) Moment due to gravity
-fhat_vol_0 = -6*V*TripInt(cm.cross_product(yt,rho*g*e3),b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-cm.show1(simplify(fhat_vol_0 + cm.cross_product(yt_cog,M*g*e3)));
-
-%% 7.4 Plots
-
-%Tetrahedron coordinates
-Yi = zeros(3,4);
-for i = 1:4
-    Yi(1:3,i) = eval(subs(y(Rt,Xi(:,i),bt),T,Tmax));
+%% 8.1 (3) Sum of stresses * Area = force
+% Stress vectors on faces
+for i=1:4
+    itt(:,i) = (F_con-3*ift(:,i))/Ai(:,i);
 end
-Yt_cog = eval(subs(yt_cog,T,Tmax));
-F_ine = eval(subs(f_ine,T,Tmax)); % seems wrong
-F_vol = eval(subs(f_vol,T,Tmax)); 
-Fhat_ine_0 = eval(subs(fhat_ine_0,T,Tmax)); 
-Fhat_vol_0 = eval(subs(fhat_vol_0,T,Tmax)); 
 
-scale = 1/10;
+% Multiplied by the area
+for i=1:4
+    Aiitt(:,i) = itt(:,i)*Ai(:,i);
+end
 
+%Sum that
+sumAiitt = sum(Aiitt,2);
 
+%Compare with the given contact force
+cm.show1(simplify(sumAiitt-F_con))
 
-%% 7.4.(7) Inertial force on tetrahedron
-% Show me the inertia
-figure();
-% Show me the tetrahedrae
-cm.plot_tetra(Yi(:,1),Yi(:,2),Yi(:,3),Yi(:,4));
-hold on;
-cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
-% Show me some Centers of Gravity
-cm.plot_tetra_point(Yt_cog(1),Yt_cog(2),Yt_cog(3),'blue');
-cm.plot_tetra_point(Xcog(1),Xcog(2),Xcog(3),'blue');
-cm.plot_vector(Yt_cog,Yt_cog+F_ine*scale,2,'m'  );
+%% 8.1 (4) Sum of moments
+% Stress vectors on faces
+for i=1:4
+    itt(:,i) = (F_con-3*ift(:,i))/Ai(:,i);
+end
 
-%% 7.4.(8) Inertial force about the origin
-% Show me the moment (about the origin)
-figure();
-% Show me the tetrahedrae
-cm.plot_tetra(Yi(:,1),Yi(:,2),Yi(:,3),Yi(:,4));
-hold on;
-cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
-% Show me some Centers of Gravity
-cm.plot_tetra_point(Yt_cog(1),Yt_cog(2),Yt_cog(3),'blue');
-cm.plot_tetra_point(Xcog(1),Xcog(2),Xcog(3),'blue');
-cm.plot_vector(zeros(3,1),Fhat_ine_0*scale,2,'m'  );
+% Multiplied by the area
+for i=1:4
+    cfiyAiitt(:,i) = cm.cross_product(ycenti(:,i),Aiitt(:,i));
+end
 
-%% 7.4.(9) Gravity force on tetrahedron
-% Show me the gravity
-figure();
-% Show me the tetrahedrae
-cm.plot_tetra(Yi(:,1),Yi(:,2),Yi(:,3),Yi(:,4));
-hold on;
-cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
-% Show me some Centers of Gravity
-cm.plot_tetra_point(Yt_cog(1),Yt_cog(2),Yt_cog(3),'blue');
-cm.plot_tetra_point(Xcog(1),Xcog(2),Xcog(3),'blue');
-cm.plot_vector(Yt_cog,Yt_cog+F_vol*scale,2,'m'  );
+%Sum that
+sumcfiyAiitt = sum(cfiyAiitt,2);
 
-%% 7.4.(10) Gravity moment on tetrahedron about origin
-% Show me the moment due to gravity about the origin
-figure();
-scale = 1/2; % Scale this up just to visualize better
-% Show me the tetrahedrae
-cm.plot_tetra(Yi(:,1),Yi(:,2),Yi(:,3),Yi(:,4));
-hold on;
-cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
-% Show me some Centers of Gravity
-cm.plot_tetra_point(Yt_cog(1),Yt_cog(2),Yt_cog(3),'blue');
-cm.plot_tetra_point(Xcog(1),Xcog(2),Xcog(3),'blue');
-cm.plot_vector(zeros(3,1),Fhat_vol_0*scale,2,'m'  );
-scale = 1/10;
-%% 7.4.(v2) Plotall
+%Compare with the given contact force
+res4=(simplify(sumcfiyAiitt-F_con0));
 
-% Show me the inertia
-figure();
-% Show me the tetrahedrae
-cm.plot_tetra(Yi(:,1),Yi(:,2),Yi(:,3),Yi(:,4));
-hold on;
-cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
-% Show me some Centers of Gravity
-cm.plot_tetra_point(Yt_cog(1),Yt_cog(2),Yt_cog(3),'blue');
-cm.plot_tetra_point(Xcog(1),Xcog(2),Xcog(3),'blue');
-cm.plot_vector(Yt_cog,Yt_cog+F_ine*scale,2,'m'  );
+%Round up for the display
+cm.show1(cm.roundDecimals(double(subs(res4,t,Tmax)),2))
 
-% Show me the moment (about the origin)
-hold on;
-cm.plot_vector(zeros(3,1),Fhat_ine_0*scale,2,'g'  );
+%% Plot of the nodal forces
+ Tt = zeros(3);
+ 
+% Substitute with the value at t=Tmax
+for i=1:4
+    ift(:,i) = subs(-1/3*(Tt*Aini(:,i)+ WtiAini(:,i))+1/4*F_con,t,Tmax);
+end  
+yi=subs(yi,t,Tmax);
 
-% Gravity force on tetrahedron
-hold on;
-cm.plot_vector(Yt_cog,Yt_cog+F_vol*scale,2,'r'  );
-
-% Show me the moment due to gravity about the origin
-hold on;
-cm.plot_vector(zeros(3,1),Fhat_vol_0*scale,2,'c'  );
-
-%% 7.5 Homogenous Deformation
-% If volume is not preserved may need to recalculate V
-
-F =@(T,Tmax) [[ (1+T/Tmax) 3^0.5*T/Tmax*(1+T/Tmax) 0 ]; [0 (1+T/Tmax) 0]; [0 0 (1+T/Tmax)*(1+2*T/Tmax)]; ];
-Ft = F(T,Tmax);
-y2 =@(R,F,x,b) R*F*x+b;
-yt = y2(Rt,Ft,Xi(1:3,1:3)*b,bt);
-dydt = diff(yt,T);
-Yi = zeros(3,4);
-for i = 1:4
-    Yi(1:3,i) = eval(subs(y2(Rt,Ft,Xi(:,i),bt),T,Tmax));
-end 
-lt  = 6*V*TripInt(dydt*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-%Yt_cog = eval(subs(subs(subs(subs(COG(yt),T,Tmax),b1,0.1),b2,0.1),b3,0.1));
-Yt_cog = eval(subs(COG(yt),T,Tmax));
-F_ine = eval(subs(diff(lt,T),T,Tmax));
-l_hat_0 = simplify(6*V*TripInt(cm.cross_product(yt,dydt)*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1));
-Fhat_ine_0 = eval(subs(diff(l_hat_0,T),T,Tmax));
-F_vol = -6*V*TripInt(rho*g*e3,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);% Probably not correct
-fhat_vol_0 = -6*V*TripInt(cm.cross_product(yt,rho*g*e3),b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-Fhat_vol_0 = eval(subs(fhat_vol_0,T,Tmax));
+% Plot the tetras
+figure(1)
+cm.plot_tetra_dual(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4),yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+% Add the forces vectors
+scaleFact = 0.5;
+for i=1:4
+    hold on
+    cm.plot_vector(yi(:,i),yi(:,i)+ift(:,i)*scaleFact,2,'red')
+end
 
 
-%%
-figure(2);
-% Show me the tetrahedrae
-hold on;
-cm.plot_tetra(Yi(:,1),Yi(:,2),Yi(:,3),Yi(:,4));
-hold on;
-cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
-% Show me some Centers of Gravity
-hold on;
-cm.plot_tetra_point(Yt_cog(1),Yt_cog(2),Yt_cog(3),'blue');
-% Show me the inertia
-hold on;
-cm.plot_vector(Yt_cog,Yt_cog+F_ine*scale,2,'m'  );
-% Show me the moment (about the origin)
-hold on;
-cm.plot_vector(zeros(3,1),Fhat_ine_0*scale,2,'m'  );
-% Show me the gravity
-hold on;
-cm.plot_vector(Yt_cog,Yt_cog+F_vol*scale,2,'m'  );
-% Show me the moment due to gravity about the origin
-hold on;
-cm.plot_vector(zeros(3,1),Fhat_vol_0*scale,2,'m'  );
-% Show me the moment due to gravity about the origin
+%% 8.2 (5) Hydrostatic stress
+p = 25; % Pressure in KPa
+%Hydrostatic stress
+T_hydro = -p*I
+
+%Plot 
+figure(2)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.0025;
+for i=1:4
+    hold on
+    cm.plot_vector(xcenti(:,i),xcenti(:,i)-T_hydro*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%% 8.3 (6) Uniaxial stress 
+sigma = 10; % Pressure in KPa
+
+% Uniaxial stress
+T_uniax = sigma*(cm.dyadic_product11(e3,e3))
+
+%Plot 
+figure(3)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.005;
+for i=1:4
+    hold on
+    cm.plot_vector(Xi(:,i),Xi(:,i)-T_uniax*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%% 8.4 Shear stress (7)
+thau = 3.5; % Pressure in KPa
+
+%Shear stress
+T_shear = thau*(cm.dyadic_product11(e1,e2)+cm.dyadic_product11(e2,e1))
+
+%Plot 
+figure(4)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.025;
+for i=1:4
+    hold on
+    cm.plot_vector(xcenti(:,i),xcenti(:,i)+T_shear*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%% 8.5 Optional multiaxial stress
+
+%Multiaxial stress
+T_multi = p*I+sigma*(cm.dyadic_product11(e3,e3))+thau*(cm.dyadic_product11(e1,e2)+cm.dyadic_product11(e2,e1))
+
+
+%Plot 
+figure(5)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.0025;
+for i=1:4
+    hold on
+    cm.plot_vector(Xi(:,i),Xi(:,i)-T_multi*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%Hydrostatic pressure
+hydroStP=1/3*cm.trace(T_multi)
+
+%Von mises stress 
+T_prime = T_multi - hydroStP*I;
+vmStress = sqrt(3/2*cm.frobenius22(T_prime,T_prime))
+%The last one doesn't seem to work.
+%% Finish
+%publish('exercice8.m')
