@@ -62,10 +62,10 @@ yi(:,4) = y(Rt,Xi(:,4),bt);
 yi
 
 %Get the normals to the faces, centers and area
-Area(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
-Area(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
-Area(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
-Area(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
+Ai(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
+Ai(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
+Ai(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
+Ai(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
 Area
 
 %Use the providen function for the normals to the surface
@@ -76,9 +76,9 @@ Area
 wt = 0;
 for i = 1:4
     %The invert doesn't work...
-    %cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))
+    %cm.invert(cm.dyadic_product11(ycenti(:,i),Ai(i)*ynormi(:,i)))
     
-    tempwt = -4*(cm.scalar_product(ycenti(:,i),(Area(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
+    tempwt = -4*(cm.scalar_product(ycenti(:,i),(Ai(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Ai(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
     wt = wt + tempwt;
 end
 
