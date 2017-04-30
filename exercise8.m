@@ -80,9 +80,22 @@ end
 i=4;
 wt = -4*cm.invert(cm.scalar_product(ycenti(:,i),Aini(:,i))*I+cm.dyadic_product11(ycenti(:,i),Aini(:,i)))*(F_con0-cm.cross_product(yc,F_con));
 
+% Antisymmetric stress tensor W
+for i = 1:4
+    WtiAini(:,i) = -1/2*cm.cross_product(wt,Aini(:,i));
+end
+
+%Symmetric stress tensor
+syms T11 T12 T13 T21 T22 T23 T31 T32 T33
+Tt = [T11, T12, T13; T21, T22, T23; T31, T32, T33]
+
+
+%Forces vector on the verticles
+for i=1:4
+    ift(:,i) = -1/3*(Tt* Aini(:,i)+ WtiAini(:,i)+1/4*F_con)
+end
                           
-% Calculate the linear momentum
-lt  = 6*V*TripInt(dydt*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+%% 8.1 (1) Definition of the contact forces 
 
 %% 7.1.(1) verify linear momentum is velocity of the center of mass times the total mass
 M           = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
