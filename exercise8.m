@@ -54,11 +54,11 @@ y =@(R,x,b) R*x + b;
 
 %Contact force defined with handles
 F_contact  =  @(theta) [-pi^2/15*(cos(theta)-sin(theta)); -pi^2/15*(cos(theta)+sin(theta));5/3];
-F_contact0 =  @(fact,theta) fact*[cos(theta)+sin(theta);cos(theta)-sin(theta);0];
+F_contact0 =  @(fact,theta) fact*[sin(theta)+cos(theta);sin(theta)-cos(theta);0];
 
 %Apply the given values
 F_con  = F_contact(4*pi*T);
-F_con0 = F_contact0(125+pi^2*(4+60*T)/3000,4*pi*T);
+F_con0 = F_contact0((125+pi^2*(4+60*T))/3000,4*pi*T);
 
 % Function handle to clean up all these triple integrals
 TripInt =@(fun,v1,l1,u1,v2,l2,u2,v3,l3,u3) int( int( int( fun, v1, l1, u1), v2, l2, u2), v3, l3, u3);
@@ -67,7 +67,7 @@ TripInt =@(fun,v1,l1,u1,v2,l2,u2,v3,l3,u3) int( int( int( fun, v1, l1, u1), v2, 
 COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
 
 % Function handle for the are of faces
-faceArea= @(curNode1,curNode2,curNode3) 0.5*cm.norm(cm.cross_product((curNode1-curNode2),(curNode3-curNode2)));  
+faceArea = @(nodeB,nodeC,nodeD) 1/2*cm.norm(cm.cross_product((nodeC-nodeD),(nodeB-nodeD)));  
 
 % Old stuff
 % %Computation of the new vertices
@@ -85,10 +85,11 @@ yi(:,3) = y(Rt,Xi(:,3),bt);
 yi(:,4) = y(Rt,Xi(:,4),bt);
 
 %Get the normals to the faces, centers and area
-Ai(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
-Ai(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
-Ai(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
-Ai(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
+Ai(1)=faceArea(yi(:,2),yi(:,3),yi(:,4));
+Ai(2)=faceArea(yi(:,3),yi(:,4),yi(:,1));
+Ai(3)=faceArea(yi(:,4),yi(:,1),yi(:,2));
+Ai(4)=faceArea(yi(:,1),yi(:,2),yi(:,3));
+
 
 %Use the providen function for the normals to the surface
 [ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4));
@@ -110,7 +111,7 @@ end
 %Symmetric stress tensor
 if enableSyms == 1
     syms T11 T12 T13 T21 T22 T23 T31 T32 T33
-    Tt = [T11, T12, T13; T12, T22, T23; T12, T23, T33];  %Taking advantage of the symmetry              
+    Tt = [T11, T12, T13; T12, T22, T23; T13, T23, T33];  %Taking advantage of the symmetry              
 else
     Tt = zeros(3)
 end
@@ -121,10 +122,28 @@ for i=1:4
 end  
 %% 8.1 (1) Definition of the contact forces 
 %Compute the sum of the forces
-sumift = sum(ift,2);
+sumift = sum(ift,2)
 
 %Compare with the given contact force
 cm.show1(simplify(sumift-F_con))
+
+%% 8.1 (2) 
+% Compute the sum of the moments
+for i=1:4
+    Myi(:,i) = cm.cross_product(yi(:,i),ift(:,i));
+end
+
+%Sum of all moments
+sumMyi = sum(Myi,2);
+
+%Compare with the original moments
+res2=(simplify(sumMyi-F_con0));
+
+%Round up for the display
+cm.show1(cm.roundDecimals(double(subs(res2,t,Tmax)),2))
+
+
+
 %% 7.1.(1) verify linear momentum is velocity of the center of mass times the total mass
 M           = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
 % Center of gravity for the velocity of y
