@@ -71,14 +71,18 @@ Ai
 %Use the providen function for the normals to the surface
 [ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4))
 
-Aini = Ai*ynormi';
+%Computation of the Area-weighted normas
+for i = 1:4
+    Aini(:,i) = Ai(i)*ynormi(:,i);
+end
 
 %Sum wt for all faces 
 %Still stuck here - doesn't work.
 wt = 0;
+
 for i = 1:4
     %The invert doesn't work...
-    %cm.invert(cm.dyadic_product11(ycenti(:,i),Ai(i)*ynormi(:,i)))
+    cm.invert(cm.dyadic_product11(ycenti(:,i),Ai(i)*ynormi(:,i)))
     
     tempwt = -4*(cm.scalar_product(ycenti(:,i),(Ai(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Ai(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
     wt = wt + tempwt;
