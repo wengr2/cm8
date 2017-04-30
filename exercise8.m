@@ -76,17 +76,9 @@ for i = 1:4
     Aini(:,i) = Ai(i)*ynormi(:,i);
 end
 
-%Sum wt for all faces 
-%Still stuck here - doesn't work.
-wt = 0;
-
-for i = 1:4
-    %The invert doesn't work...
-    cm.invert(cm.dyadic_product11(ycenti(:,i),Ai(i)*ynormi(:,i)))
-    
-    tempwt = -4*(cm.scalar_product(ycenti(:,i),(Ai(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Ai(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
-    wt = wt + tempwt;
-end
+%Only non-singular matrix is @i=4
+i=4;
+wt = -4*cm.invert(cm.scalar_product(ycenti(:,i),Aini(:,i))*I+cm.dyadic_product11(ycenti(:,i),Aini(:,i)))*(F_con0-cm.cross_product(yc,F_con));
 
                           
 % Calculate the linear momentum
