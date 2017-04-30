@@ -13,12 +13,21 @@ if exist('imported','var') ~= 1
     def_symbols;
     imported = 1;
 end
-%% 8.1 Stress vectors
+%% Parameters
+
+%Toogle symbolic values, used for testing
+enableSyms = 1;
+%% 8.1 Computation of all necessary variables
 % define the geometry and build the tetrahedron
 Xi = [[1/10 0 0]; [0 1/10 0]; [0 0 1/10]; [0 0 0]; ]';
+
 % density
 rho = 1000; % kg/m^3
-g = 10; % m/s^2 (close enough...)
+
+%Gravity
+g = 10; % m/s^2 
+
+% Time symbols
 syms T Tmax t
 
 % Rotation around e1,e2,e3 respectively
@@ -28,9 +37,19 @@ R3 = @(theta) [ [ cos(theta) -sin(theta) 0 ]; [ sin(theta) cos(theta) 0 ]; [ 0 0
 
 %Motion of the tetrahedron as in exercice 7
 Tmax = 1/2;
-T = t; %Back to symbolics as the master said
+if enableSyms == 1
+    T = t;                  %Time defined as a symbol for starters
+else
+    T = Tmax;
+end
+
+%Rotation
 Rt = R3(2*pi*T/Tmax);
-bt = [ 0 0 3/20*T/Tmax]';
+
+%Translation
+bt = [ 0; 0; 3/20*T/Tmax];
+
+%Transformation matrix
 y =@(R,x,b) R*x + b;
 
 %Contact force defined with handles
@@ -43,15 +62,20 @@ F_con0 = F_contact0(125+pi^2*(4+60*T)/3000,4*pi*T);
 
 % Function handle to clean up all these triple integrals
 TripInt =@(fun,v1,l1,u1,v2,l2,u2,v3,l3,u3) int( int( int( fun, v1, l1, u1), v2, l2, u2), v3, l3, u3);
- 
-%% Forces vectors on the verticles  
+
+% Function handle for the centre of gravity
 COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-faceArea= @(curNode1,curNode2,curNode3) cm.norm(cm.cross_product((curNode1-curNode2),(curNode3-curNode2)));  
 
+% Function handle for the are of faces
+faceArea= @(curNode1,curNode2,curNode3) 0.5*cm.norm(cm.cross_product((curNode1-curNode2),(curNode3-curNode2)));  
 
+% Old stuff
+% %Computation of the new vertices
 yt = y(Rt,Xi(1:3,1:3)*b,bt); % Simple transform of b into x into y...
-V = 1/6000; % same result as above but keep it symbolic
-M = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);          
+% 
+% 
+% % V = 1/6000; % same result as above but keep it symbolic
+% % M = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);          
 yc = COG(yt);
 
 %Final positions
@@ -59,17 +83,15 @@ yi(:,1) = y(Rt,Xi(:,1),bt);
 yi(:,2) = y(Rt,Xi(:,2),bt);
 yi(:,3) = y(Rt,Xi(:,3),bt);
 yi(:,4) = y(Rt,Xi(:,4),bt);
-yi
 
 %Get the normals to the faces, centers and area
 Ai(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
 Ai(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
 Ai(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
 Ai(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
-Ai
 
 %Use the providen function for the normals to the surface
-[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4));
 
 %Computation of the Area-weighted normas
 for i = 1:4
@@ -80,10 +102,29 @@ end
 i=4;
 wt = -4*cm.invert(cm.scalar_product(ycenti(:,i),Aini(:,i))*I+cm.dyadic_product11(ycenti(:,i),Aini(:,i)))*(F_con0-cm.cross_product(yc,F_con));
 
-                          
-% Calculate the linear momentum
-lt  = 6*V*TripInt(dydt*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+% Antisymmetric stress tensor W
+for i = 1:4
+    WtiAini(:,i) = -1/2*cm.cross_product(wt,Aini(:,i));
+end
 
+%Symmetric stress tensor
+if enableSyms == 1
+    syms T11 T12 T13 T21 T22 T23 T31 T32 T33
+    Tt = [T11, T12, T13; T12, T22, T23; T12, T23, T33];  %Taking advantage of the symmetry              
+else
+    Tt = zeros(3)
+end
+
+% Forces vector on the verticles
+for i=1:4
+    ift(:,i) = -1/3*(Tt*Aini(:,i)+ WtiAini(:,i))+1/4*F_con;
+end  
+%% 8.1 (1) Definition of the contact forces 
+%Compute the sum of the forces
+sumift = sum(ift,2);
+
+%Compare with the given contact force
+cm.show1(simplify(sumift-F_con))
 %% 7.1.(1) verify linear momentum is velocity of the center of mass times the total mass
 M           = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
 % Center of gravity for the velocity of y
