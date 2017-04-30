@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>Continuum Mechanics, Exercise 8</title><meta name="generator" content="MATLAB 9.1"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2017-04-27"><meta name="DC.source" content="exercise8.m"><style type="text/css">
+      --><title>Continuum Mechanics, Exercise 8</title><meta name="generator" content="MATLAB 9.1"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2017-04-30"><meta name="DC.source" content="exercise8.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -66,17 +66,24 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 
 
 
-  </style></head><body><div class="content"><h1>Continuum Mechanics, Exercise 8</h1><!--introduction--><p>Paul Kulyk Raphael Wenger</p><p><a href="mailto:paul.kulyk@students.unibe.ch">paul.kulyk@students.unibe.ch</a> <a href="mailto:raphael.wenger@students.unibe.ch">raphael.wenger@students.unibe.ch</a></p><p>Due Mai 2, 2017</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Include the predefined tensor math functions</a></li><li><a href="#2">8.1 Stress vectors</a></li><li><a href="#3">Forces vectors on the verticles</a></li><li><a href="#4"><pre class="codeinput">addpath(<span class="string">'../../Matlab/'</span>);
+  </style></head><body><div class="content"><h1>Continuum Mechanics, Exercise 8</h1><!--introduction--><p>Paul Kulyk Raphael Wenger</p><p><a href="mailto:paul.kulyk@students.unibe.ch">paul.kulyk@students.unibe.ch</a> <a href="mailto:raphael.wenger@students.unibe.ch">raphael.wenger@students.unibe.ch</a></p><p>Due Mai 2, 2017</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Include the predefined tensor math functions</a></li><li><a href="#2">Parameters</a></li><li><a href="#3">8.1 Computation of all necessary variables</a></li><li><a href="#4">8.1 (1) Definition of the contact forces</a></li><li><a href="#5">8.1 (2)</a></li><li><a href="#6">8.1 (3) Sum of stresses * Area = force</a></li><li><a href="#7">8.1 (4) Sum of moments</a></li><li><a href="#8">Plot of the nodal forces</a></li><li><a href="#9">8.2 (5) Hydrostatic stress</a></li><li><a href="#10">8.3 (6) Uniaxial stress</a></li><li><a href="#11">8.4 Shear stress (7)</a></li><li><a href="#12">8.5 Optional multiaxial stress</a></li><li><a href="#13">Finish</a></li></ul></div><h2 id="1">Include the predefined tensor math functions</h2><pre class="codeinput">addpath(<span class="string">'../../Matlab/'</span>);
 <span class="keyword">if</span> exist(<span class="string">'imported'</span>,<span class="string">'var'</span>) ~= 1
     def_symbols;
     imported = 1;
 <span class="keyword">end</span>
 </pre><pre class="codeoutput">Warning: Name is nonexistent or not a directory: ..\..\Matlab 
-</pre><h2 id="2">8.1 Stress vectors</h2><p>define the geometry and build the tetrahedron</p><pre class="codeinput">Xi = [[1/10 0 0]; [0 1/10 0]; [0 0 1/10]; [0 0 0]; ]';
+</pre><h2 id="2">Parameters</h2><pre class="codeinput"><span class="comment">%Toogle symbolic values, used for testing</span>
+enableSyms = 1;
+</pre><h2 id="3">8.1 Computation of all necessary variables</h2><p>define the geometry and build the tetrahedron</p><pre class="codeinput">Xi = [[1/10 0 0]; [0 1/10 0]; [0 0 1/10]; [0 0 0]; ]';
+
 <span class="comment">% density</span>
 rho = 1000; <span class="comment">% kg/m^3</span>
-g = 10; <span class="comment">% m/s^2 (close enough...)</span>
-syms <span class="string">T</span> <span class="string">Tmax</span>
+
+<span class="comment">%Gravity</span>
+g = 10; <span class="comment">% m/s^2</span>
+
+<span class="comment">% Time symbols</span>
+syms <span class="string">T</span> <span class="string">Tmax</span> <span class="string">t</span>
 
 <span class="comment">% Rotation around e1,e2,e3 respectively</span>
 R1 = @(theta) [ [ 1 0 0 ]; [ 0 cos(theta) -sin(theta) ]; [ 0 sin(theta) cos(theta) ];];
@@ -85,33 +92,47 @@ R3 = @(theta) [ [ cos(theta) -sin(theta) 0 ]; [ sin(theta) cos(theta) 0 ]; [ 0 0
 
 <span class="comment">%Motion of the tetrahedron as in exercice 7</span>
 Tmax = 1/2;
-T = 1/2 <span class="comment">%Just to get some results...</span>
+<span class="keyword">if</span> enableSyms == 1
+    T = t;                  <span class="comment">%Time defined as a symbol for starters</span>
+<span class="keyword">else</span>
+    T = Tmax;
+<span class="keyword">end</span>
+
+<span class="comment">%Rotation</span>
 Rt = R3(2*pi*T/Tmax);
-bt = [ 0 0 3/20*T/Tmax]';
+
+<span class="comment">%Translation</span>
+bt = [ 0; 0; 3/20*T/Tmax];
+
+<span class="comment">%Transformation matrix</span>
 y =@(R,x,b) R*x + b;
 
 <span class="comment">%Contact force defined with handles</span>
 F_contact  =  @(theta) [-pi^2/15*(cos(theta)-sin(theta)); -pi^2/15*(cos(theta)+sin(theta));5/3];
-F_contact0 =  @(fact,theta) fact*[cos(theta)+sin(theta);cos(theta)-sin(theta);0];
+F_contact0 =  @(fact,theta) fact*[sin(theta)+cos(theta);sin(theta)-cos(theta);0];
 
 <span class="comment">%Apply the given values</span>
 F_con  = F_contact(4*pi*T);
-F_con0 = F_contact0(125+pi^2*(4+60*T)/3000,4*pi*T);
+F_con0 = F_contact0((125+pi^2*(4+60*T))/3000,4*pi*T);
 
 <span class="comment">% Function handle to clean up all these triple integrals</span>
 TripInt =@(fun,v1,l1,u1,v2,l2,u2,v3,l3,u3) int( int( int( fun, v1, l1, u1), v2, l2, u2), v3, l3, u3);
-</pre><pre class="codeoutput">
-T =
 
-    0.5000
-
-</pre><h2 id="3">Forces vectors on the verticles</h2><pre class="codeinput">COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-faceArea= @(curNode1,curNode2,curNode3) cm.norm(cm.cross_product((curNode1-curNode2),(curNode3-curNode2)));
+<span class="comment">% Function handle for the are of faces</span>
+faceArea = @(nodeB,nodeC,nodeD) 1/2*cm.norm(cm.cross_product((nodeC-nodeD),(nodeB-nodeD)));
 
 
+<span class="comment">% %Computation of the new vertices</span>
 yt = y(Rt,Xi(1:3,1:3)*b,bt); <span class="comment">% Simple transform of b into x into y...</span>
-V = 1/6000; <span class="comment">% same result as above but keep it symbolic</span>
+
+<span class="comment">%Center of gravtiy</span>
+V = 1/6000; <span class="comment">%</span>
 M = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+
+
+<span class="comment">% Function handle for the centre of gravity</span>
+COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+
 yc = COG(yt);
 
 <span class="comment">%Final positions</span>
@@ -119,70 +140,228 @@ yi(:,1) = y(Rt,Xi(:,1),bt);
 yi(:,2) = y(Rt,Xi(:,2),bt);
 yi(:,3) = y(Rt,Xi(:,3),bt);
 yi(:,4) = y(Rt,Xi(:,4),bt);
-yi
 
 <span class="comment">%Get the normals to the faces, centers and area</span>
-Area(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
-Area(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
-Area(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
-Area(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
-Area
+Ai(1)=faceArea(yi(:,2),yi(:,3),yi(:,4));
+Ai(2)=faceArea(yi(:,3),yi(:,4),yi(:,1));
+Ai(3)=faceArea(yi(:,4),yi(:,1),yi(:,2));
+Ai(4)=faceArea(yi(:,1),yi(:,2),yi(:,3));
+
 
 <span class="comment">%Use the providen function for the normals to the surface</span>
-[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+[xnormi xcenti] = cm.get_tetra_normal(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
+[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4));
 
-<span class="comment">%Sum wt for all faces</span>
-<span class="comment">%Still stuck here - doesn't work.</span>
-wt = 0;
+
+<span class="comment">%Computation of the Area-weighted normas</span>
 <span class="keyword">for</span> i = 1:4
-    <span class="comment">%The invert doesn't work...</span>
-    <span class="comment">%cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))</span>
-
-    tempwt = -4*(cm.scalar_product(ycenti(:,i),(Area(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
-    wt = wt + tempwt;
+    Aini(:,i) = Ai(i)*ynormi(:,i);
 <span class="keyword">end</span>
 
+<span class="comment">%Only non-singular matrix is @i=4</span>
+i=4;
+wt = -4*cm.invert(cm.scalar_product(ycenti(:,i),Aini(:,i))*I+cm.dyadic_product11(ycenti(:,i),Aini(:,i)))*(F_con0-cm.cross_product(yc,F_con));
 
-<span class="comment">% Calculate the linear momentum</span>
-lt  = 6*V*TripInt(dydt*rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+<span class="comment">% Antisymmetric stress tensor W</span>
+<span class="keyword">for</span> i = 1:4
+    WtiAini(:,i) = -1/2*cm.cross_product(wt,Aini(:,i));
+<span class="keyword">end</span>
+
+<span class="comment">%Symmetric stress tensor</span>
+<span class="keyword">if</span> enableSyms == 1
+    syms <span class="string">T11</span> <span class="string">T12</span> <span class="string">T13</span> <span class="string">T21</span> <span class="string">T22</span> <span class="string">T23</span> <span class="string">T31</span> <span class="string">T32</span> <span class="string">T33</span>
+    Tt = [T11, T12, T13; T12, T22, T23; T13, T23, T33];  <span class="comment">%Taking advantage of the symmetry</span>
+<span class="keyword">else</span>
+    Tt = zeros(3)
+<span class="keyword">end</span>
+
+<span class="comment">% Forces vector on the verticles</span>
+<span class="keyword">for</span> i=1:4
+    ift(:,i) = -1/3*(Tt*Aini(:,i)+ WtiAini(:,i))+1/4*F_con;
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">symbolic!
+</pre><h2 id="4">8.1 (1) Definition of the contact forces</h2><pre class="codeinput"><span class="comment">%Compute the sum of the forces</span>
+sumift = sum(ift,2);
+
+<span class="comment">%Compare with the given contact force</span>
+cm.show1(simplify(sumift-F_con))
+</pre><pre class="codeoutput">/ 0 \ 
+| 0 | 
+\ 0 / 
+</pre><h2 id="5">8.1 (2)</h2><p>Compute the sum of the moments</p><pre class="codeinput"><span class="keyword">for</span> i=1:4
+    Myi(:,i) = cm.cross_product(yi(:,i),ift(:,i));
+<span class="keyword">end</span>
+
+<span class="comment">%Sum of all moments</span>
+sumMyi = sum(Myi,2);
+
+<span class="comment">%Compare with the original moments</span>
+res2=(simplify(sumMyi-F_con0));
+
+<span class="comment">%Round up for the display</span>
+cm.show1(cm.roundDecimals(double(subs(res2,t,Tmax)),2))
+</pre><pre class="codeoutput">/ 0 \ 
+| 0 | 
+\ 0 / 
+</pre><h2 id="6">8.1 (3) Sum of stresses * Area = force</h2><p>Stress vectors on faces</p><pre class="codeinput"><span class="keyword">for</span> i=1:4
+    itt(:,i) = (F_con-3*ift(:,i))/Ai(:,i);
+<span class="keyword">end</span>
+
+<span class="comment">% Multiplied by the area</span>
+<span class="keyword">for</span> i=1:4
+    Aiitt(:,i) = itt(:,i)*Ai(:,i);
+<span class="keyword">end</span>
+
+<span class="comment">%Sum that</span>
+sumAiitt = sum(Aiitt,2);
+
+<span class="comment">%Compare with the given contact force</span>
+cm.show1(simplify(sumAiitt-F_con))
+</pre><pre class="codeoutput">/ 0 \ 
+| 0 | 
+\ 0 / 
+</pre><h2 id="7">8.1 (4) Sum of moments</h2><p>Stress vectors on faces</p><pre class="codeinput"><span class="keyword">for</span> i=1:4
+    itt(:,i) = (F_con-3*ift(:,i))/Ai(:,i);
+<span class="keyword">end</span>
+
+<span class="comment">% Multiplied by the area</span>
+<span class="keyword">for</span> i=1:4
+    cfiyAiitt(:,i) = cm.cross_product(ycenti(:,i),Aiitt(:,i));
+<span class="keyword">end</span>
+
+<span class="comment">%Sum that</span>
+sumcfiyAiitt = sum(cfiyAiitt,2);
+
+<span class="comment">%Compare with the given contact force</span>
+res4=(simplify(sumcfiyAiitt-F_con0));
+
+<span class="comment">%Round up for the display</span>
+cm.show1(cm.roundDecimals(double(subs(res4,t,Tmax)),2))
+</pre><pre class="codeoutput">/ 0 \ 
+| 0 | 
+\ 0 / 
+</pre><h2 id="8">Plot of the nodal forces</h2><pre class="codeinput"> Tt = zeros(3);
+
+<span class="comment">% Substitute with the value at t=Tmax</span>
+<span class="keyword">for</span> i=1:4
+    ift(:,i) = subs(-1/3*(Tt*Aini(:,i)+ WtiAini(:,i))+1/4*F_con,t,Tmax);
+<span class="keyword">end</span>
+yi=subs(yi,t,Tmax);
+
+<span class="comment">% Plot the tetras</span>
+figure(1)
+cm.plot_tetra_dual(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4),yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+<span class="comment">% Add the forces vectors</span>
+scaleFact = 0.5;
+<span class="keyword">for</span> i=1:4
+    hold <span class="string">on</span>
+    cm.plot_vector(yi(:,i),yi(:,i)+ift(:,i)*scaleFact,2,<span class="string">'red'</span>)
+<span class="keyword">end</span>
+</pre><img vspace="5" hspace="5" src="exercise8_01.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="exercise8_02.png" style="width:560px;height:420px;" alt=""> <h2 id="9">8.2 (5) Hydrostatic stress</h2><pre class="codeinput">p = 25; <span class="comment">% Pressure in KPa</span>
+<span class="comment">%Hydrostatic stress</span>
+T_hydro = -p*I
+
+<span class="comment">%Plot</span>
+figure(2)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+<span class="comment">% Add the stress vectors</span>
+scaleFact = 0.0025;
+<span class="keyword">for</span> i=1:4
+    hold <span class="string">on</span>
+    cm.plot_vector(xcenti(:,i),xcenti(:,i)-T_hydro*xnormi(:,i)*scaleFact,2,<span class="string">'red'</span>)
+<span class="keyword">end</span>
 </pre><pre class="codeoutput">
-yi =
+T_hydro =
 
-    0.1000    0.0000         0         0
-   -0.0000    0.1000         0         0
-    0.1500    0.1500    0.2500    0.1500
+   -25     0     0
+     0   -25     0
+     0     0   -25
+
+</pre><img vspace="5" hspace="5" src="exercise8_03.png" style="width:560px;height:420px;" alt=""> <h2 id="10">8.3 (6) Uniaxial stress</h2><pre class="codeinput">sigma = 10; <span class="comment">% Pressure in KPa</span>
+
+<span class="comment">% Uniaxial stress</span>
+T_uniax = sigma*(cm.dyadic_product11(e3,e3))
+
+<span class="comment">%Plot</span>
+figure(3)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+<span class="comment">% Add the stress vectors</span>
+scaleFact = 0.005;
+<span class="keyword">for</span> i=1:4
+    hold <span class="string">on</span>
+    cm.plot_vector(Xi(:,i),Xi(:,i)-T_uniax*xnormi(:,i)*scaleFact,2,<span class="string">'red'</span>)
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">
+T_uniax =
+
+     0     0     0
+     0     0     0
+     0     0    10
+
+</pre><img vspace="5" hspace="5" src="exercise8_04.png" style="width:560px;height:420px;" alt=""> <h2 id="11">8.4 Shear stress (7)</h2><pre class="codeinput">thau = 3.5; <span class="comment">% Pressure in KPa</span>
+
+<span class="comment">%Shear stress</span>
+T_shear = thau*(cm.dyadic_product11(e1,e2)+cm.dyadic_product11(e2,e1))
+
+<span class="comment">%Plot</span>
+figure(4)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+<span class="comment">% Add the stress vectors</span>
+scaleFact = 0.025;
+<span class="keyword">for</span> i=1:4
+    hold <span class="string">on</span>
+    cm.plot_vector(xcenti(:,i),xcenti(:,i)+T_shear*xnormi(:,i)*scaleFact,2,<span class="string">'red'</span>)
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">
+T_shear =
+
+         0    3.5000         0
+    3.5000         0         0
+         0         0         0
+
+</pre><img vspace="5" hspace="5" src="exercise8_05.png" style="width:560px;height:420px;" alt=""> <h2 id="12">8.5 Optional multiaxial stress</h2><pre class="codeinput"><span class="comment">%Multiaxial stress</span>
+T_multi = p*I+sigma*(cm.dyadic_product11(e3,e3))+thau*(cm.dyadic_product11(e1,e2)+cm.dyadic_product11(e2,e1))
 
 
-Area =
+<span class="comment">%Plot</span>
+figure(5)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
 
-    0.0100    0.0100    0.0100    0.0173
+<span class="comment">% Add the stress vectors</span>
+scaleFact = 0.0025;
+<span class="keyword">for</span> i=1:4
+    hold <span class="string">on</span>
+    cm.plot_vector(Xi(:,i),Xi(:,i)-T_multi*xnormi(:,i)*scaleFact,2,<span class="string">'red'</span>)
+<span class="keyword">end</span>
+
+<span class="comment">%Hydrostatic pressure</span>
+hydroStP=1/3*cm.trace(T_multi)
+
+<span class="comment">%Von mises stress</span>
+T_prime = T_multi - hydroStP*I;
+vmStress = sqrt(3/2*cm.frobenius22(T_prime,T_prime))
+<span class="comment">%The last one doesn't seem to work.</span>
+</pre><pre class="codeoutput">
+T_multi =
+
+   25.0000    3.5000         0
+    3.5000   25.0000         0
+         0         0   35.0000
 
 
-ynormi =
+hydroStP =
 
-   -1.0000   -0.0000         0    0.5774
-    0.0000   -1.0000         0    0.5774
-         0         0   -1.0000    0.5774
+   28.3333
 
 
-ycenti =
+vmStress =
 
-    0.0000    0.0333    0.0333    0.0333
-    0.0333   -0.0000    0.0333    0.0333
-    0.1833    0.1833    0.1500    0.1833
+   11.6940
 
-Singular Matrix - no Inverse!
-</pre><pre class="codeoutput error">Error using symengine
-Array sizes must match.
-
-Error in sym/privBinaryOp (line 946)
-            Csym = mupadmex(op,args{1}.s, args{2}.s, varargin{:});
-
-Error in + (line 7)
-X = privBinaryOp(A, B, 'symobj::zip', '_plus');
-
-Error in exercise8 (line 81)
-    tempwt = -4*(cm.scalar_product(ycenti(:,i),(Area(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
+</pre><img vspace="5" hspace="5" src="exercise8_06.png" style="width:560px;height:420px;" alt=""> <h2 id="13">Finish</h2><pre class="codeinput"><span class="comment">%publish('exercice8.m')</span>
 </pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2016b</a><br></p></div><!--
 ##### SOURCE BEGIN #####
 %% Continuum Mechanics, Exercise 8
@@ -200,13 +379,21 @@ if exist('imported','var') ~= 1
     def_symbols;
     imported = 1;
 end
-%% 8.1 Stress vectors
+%% Parameters
+%Toogle symbolic values, used for testing
+enableSyms = 1;
+%% 8.1 Computation of all necessary variables
 % define the geometry and build the tetrahedron
 Xi = [[1/10 0 0]; [0 1/10 0]; [0 0 1/10]; [0 0 0]; ]';
+
 % density
 rho = 1000; % kg/m^3
-g = 10; % m/s^2 (close enough...)
-syms T Tmax
+
+%Gravity
+g = 10; % m/s^2 
+
+% Time symbols
+syms T Tmax t
 
 % Rotation around e1,e2,e3 respectively
 R1 = @(theta) [ [ 1 0 0 ]; [ 0 cos(theta) -sin(theta) ]; [ 0 sin(theta) cos(theta) ];];
@@ -215,30 +402,47 @@ R3 = @(theta) [ [ cos(theta) -sin(theta) 0 ]; [ sin(theta) cos(theta) 0 ]; [ 0 0
 
 %Motion of the tetrahedron as in exercice 7
 Tmax = 1/2;
-T = 1/2 %Just to get some results...
+if enableSyms == 1
+    T = t;                  %Time defined as a symbol for starters
+else
+    T = Tmax;
+end
+
+%Rotation
 Rt = R3(2*pi*T/Tmax);
-bt = [ 0 0 3/20*T/Tmax]';
+
+%Translation
+bt = [ 0; 0; 3/20*T/Tmax];
+
+%Transformation matrix
 y =@(R,x,b) R*x + b;
 
 %Contact force defined with handles
 F_contact  =  @(theta) [-pi^2/15*(cos(theta)-sin(theta)); -pi^2/15*(cos(theta)+sin(theta));5/3];
-F_contact0 =  @(fact,theta) fact*[cos(theta)+sin(theta);cos(theta)-sin(theta);0];
+F_contact0 =  @(fact,theta) fact*[sin(theta)+cos(theta);sin(theta)-cos(theta);0];
 
 %Apply the given values
 F_con  = F_contact(4*pi*T);
-F_con0 = F_contact0(125+pi^2*(4+60*T)/3000,4*pi*T);
+F_con0 = F_contact0((125+pi^2*(4+60*T))/3000,4*pi*T);
 
 % Function handle to clean up all these triple integrals
 TripInt =@(fun,v1,l1,u1,v2,l2,u2,v3,l3,u3) int( int( int( fun, v1, l1, u1), v2, l2, u2), v3, l3, u3);
- 
-%% Forces vectors on the verticles  
-COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
-faceArea= @(curNode1,curNode2,curNode3) cm.norm(cm.cross_product((curNode1-curNode2),(curNode3-curNode2)));  
+
+% Function handle for the are of faces
+faceArea = @(nodeB,nodeC,nodeD) 1/2*cm.norm(cm.cross_product((nodeC-nodeD),(nodeB-nodeD)));  
 
 
+% %Computation of the new vertices
 yt = y(Rt,Xi(1:3,1:3)*b,bt); % Simple transform of b into x into y...
-V = 1/6000; % same result as above but keep it symbolic
-M = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);          
+
+%Center of gravtiy
+V = 1/6000; %
+M = 6*V*TripInt(rho,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);    
+
+
+% Function handle for the centre of gravity
+COG     =@(xx) 6*V/M*TripInt(rho*xx,b1,0,1-b2-b3,b2,0,1-b3,b3,0,1);
+
 yc = COG(yt);
 
 %Final positions
@@ -246,29 +450,199 @@ yi(:,1) = y(Rt,Xi(:,1),bt);
 yi(:,2) = y(Rt,Xi(:,2),bt);
 yi(:,3) = y(Rt,Xi(:,3),bt);
 yi(:,4) = y(Rt,Xi(:,4),bt);
-yi
 
 %Get the normals to the faces, centers and area
-Area(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
-Area(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
-Area(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
-Area(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
-Area
+Ai(1)=faceArea(yi(:,2),yi(:,3),yi(:,4));
+Ai(2)=faceArea(yi(:,3),yi(:,4),yi(:,1));
+Ai(3)=faceArea(yi(:,4),yi(:,1),yi(:,2));
+Ai(4)=faceArea(yi(:,1),yi(:,2),yi(:,3));
+
 
 %Use the providen function for the normals to the surface
-[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+[xnormi xcenti] = cm.get_tetra_normal(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4));
+[ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4));
 
-%Sum wt for all faces 
-%Still stuck here - doesn't work.
-wt = 0;
+
+%Computation of the Area-weighted normas
 for i = 1:4
-    %The invert doesn't work...
-    %cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))
-    
-    tempwt = -4*(cm.scalar_product(ycenti(:,i),(Area(i)*ynormi(:,i)))*I+cm.invert(cm.dyadic_product11(ycenti(:,i),Area(i)*ynormi(:,i)))*(F_con0-cm.cross_product(yc,F_con)));
-    wt = wt + tempwt;
+    Aini(:,i) = Ai(i)*ynormi(:,i);
 end
 
-                          
+%Only non-singular matrix is @i=4
+i=4;
+wt = -4*cm.invert(cm.scalar_product(ycenti(:,i),Aini(:,i))*I+cm.dyadic_product11(ycenti(:,i),Aini(:,i)))*(F_con0-cm.cross_product(yc,F_con));
+
+% Antisymmetric stress tensor W
+for i = 1:4
+    WtiAini(:,i) = -1/2*cm.cross_product(wt,Aini(:,i));
+end
+
+%Symmetric stress tensor
+if enableSyms == 1
+    syms T11 T12 T13 T21 T22 T23 T31 T32 T33
+    Tt = [T11, T12, T13; T12, T22, T23; T13, T23, T33];  %Taking advantage of the symmetry              
+else
+    Tt = zeros(3)
+end
+
+% Forces vector on the verticles
+for i=1:4
+    ift(:,i) = -1/3*(Tt*Aini(:,i)+ WtiAini(:,i))+1/4*F_con;
+end  
+%% 8.1 (1) Definition of the contact forces 
+%Compute the sum of the forces
+sumift = sum(ift,2);
+
+%Compare with the given contact force
+cm.show1(simplify(sumift-F_con))
+
+%% 8.1 (2) 
+% Compute the sum of the moments
+for i=1:4
+    Myi(:,i) = cm.cross_product(yi(:,i),ift(:,i));
+end
+
+%Sum of all moments
+sumMyi = sum(Myi,2);
+
+%Compare with the original moments
+res2=(simplify(sumMyi-F_con0));
+
+%Round up for the display
+cm.show1(cm.roundDecimals(double(subs(res2,t,Tmax)),2))
+
+%% 8.1 (3) Sum of stresses * Area = force
+% Stress vectors on faces
+for i=1:4
+    itt(:,i) = (F_con-3*ift(:,i))/Ai(:,i);
+end
+
+% Multiplied by the area
+for i=1:4
+    Aiitt(:,i) = itt(:,i)*Ai(:,i);
+end
+
+%Sum that
+sumAiitt = sum(Aiitt,2);
+
+%Compare with the given contact force
+cm.show1(simplify(sumAiitt-F_con))
+
+%% 8.1 (4) Sum of moments
+% Stress vectors on faces
+for i=1:4
+    itt(:,i) = (F_con-3*ift(:,i))/Ai(:,i);
+end
+
+% Multiplied by the area
+for i=1:4
+    cfiyAiitt(:,i) = cm.cross_product(ycenti(:,i),Aiitt(:,i));
+end
+
+%Sum that
+sumcfiyAiitt = sum(cfiyAiitt,2);
+
+%Compare with the given contact force
+res4=(simplify(sumcfiyAiitt-F_con0));
+
+%Round up for the display
+cm.show1(cm.roundDecimals(double(subs(res4,t,Tmax)),2))
+
+%% Plot of the nodal forces
+ Tt = zeros(3);
+ 
+% Substitute with the value at t=Tmax
+for i=1:4
+    ift(:,i) = subs(-1/3*(Tt*Aini(:,i)+ WtiAini(:,i))+1/4*F_con,t,Tmax);
+end  
+yi=subs(yi,t,Tmax);
+
+% Plot the tetras
+figure(1)
+cm.plot_tetra_dual(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4),yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+% Add the forces vectors
+scaleFact = 0.5;
+for i=1:4
+    hold on
+    cm.plot_vector(yi(:,i),yi(:,i)+ift(:,i)*scaleFact,2,'red')
+end
+
+
+%% 8.2 (5) Hydrostatic stress
+p = 25; % Pressure in KPa
+%Hydrostatic stress
+T_hydro = -p*I
+
+%Plot 
+figure(2)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.0025;
+for i=1:4
+    hold on
+    cm.plot_vector(xcenti(:,i),xcenti(:,i)-T_hydro*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%% 8.3 (6) Uniaxial stress 
+sigma = 10; % Pressure in KPa
+
+% Uniaxial stress
+T_uniax = sigma*(cm.dyadic_product11(e3,e3))
+
+%Plot 
+figure(3)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.005;
+for i=1:4
+    hold on
+    cm.plot_vector(Xi(:,i),Xi(:,i)-T_uniax*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%% 8.4 Shear stress (7)
+thau = 3.5; % Pressure in KPa
+
+%Shear stress
+T_shear = thau*(cm.dyadic_product11(e1,e2)+cm.dyadic_product11(e2,e1))
+
+%Plot 
+figure(4)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.025;
+for i=1:4
+    hold on
+    cm.plot_vector(xcenti(:,i),xcenti(:,i)+T_shear*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%% 8.5 Optional multiaxial stress
+
+%Multiaxial stress
+T_multi = p*I+sigma*(cm.dyadic_product11(e3,e3))+thau*(cm.dyadic_product11(e1,e2)+cm.dyadic_product11(e2,e1))
+
+
+%Plot 
+figure(5)
+cm.plot_tetra(Xi(:,1),Xi(:,2),Xi(:,3),Xi(:,4))
+
+% Add the stress vectors
+scaleFact = 0.0025;
+for i=1:4
+    hold on
+    cm.plot_vector(Xi(:,i),Xi(:,i)-T_multi*xnormi(:,i)*scaleFact,2,'red')
+end
+
+%Hydrostatic pressure
+hydroStP=1/3*cm.trace(T_multi)
+
+%Von mises stress 
+T_prime = T_multi - hydroStP*I;
+vmStress = sqrt(3/2*cm.frobenius22(T_prime,T_prime))
+%The last one doesn't seem to work.
+%% Finish
+%publish('exercice8.m')
 ##### SOURCE END #####
 --></body></html>
