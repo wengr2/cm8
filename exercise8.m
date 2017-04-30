@@ -19,7 +19,7 @@ Xi = [[1/10 0 0]; [0 1/10 0]; [0 0 1/10]; [0 0 0]; ]';
 % density
 rho = 1000; % kg/m^3
 g = 10; % m/s^2 (close enough...)
-syms T Tmax
+syms T Tmax t
 
 % Rotation around e1,e2,e3 respectively
 R1 = @(theta) [ [ 1 0 0 ]; [ 0 cos(theta) -sin(theta) ]; [ 0 sin(theta) cos(theta) ];];
@@ -28,7 +28,7 @@ R3 = @(theta) [ [ cos(theta) -sin(theta) 0 ]; [ sin(theta) cos(theta) 0 ]; [ 0 0
 
 %Motion of the tetrahedron as in exercice 7
 Tmax = 1/2;
-T = 1/2 %Just to get some results...
+T = t; %Back to symbolics as the master said
 Rt = R3(2*pi*T/Tmax);
 bt = [ 0 0 3/20*T/Tmax]';
 y =@(R,x,b) R*x + b;
@@ -66,10 +66,12 @@ Ai(1)=faceArea(yi(:,3),yi(:,2),yi(:,4));
 Ai(2)=faceArea(yi(:,4),yi(:,3),yi(:,1));
 Ai(3)=faceArea(yi(:,1),yi(:,4),yi(:,2));
 Ai(4)=faceArea(yi(:,2),yi(:,1),yi(:,3));
-Area
+Ai
 
 %Use the providen function for the normals to the surface
 [ynormi ycenti] = cm.get_tetra_normal(yi(:,1),yi(:,2),yi(:,3),yi(:,4))
+
+Aini = Ai*ynormi';
 
 %Sum wt for all faces 
 %Still stuck here - doesn't work.
