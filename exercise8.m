@@ -110,7 +110,8 @@ for i = 1:4
 end
 
 %%
-%Only non-singular matrix is @i=4
+%Only non-zero scalar product is at i=4
+%because all other faces are on the systems plane.
 i=4;
 wt = -4*cm.invert(cm.scalar_product(ycenti(:,i),Aini(:,i))*I+cm.dyadic_product11(ycenti(:,i),Aini(:,i)))*(F_con0-cm.cross_product(yc,F_con));
 
